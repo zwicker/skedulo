@@ -1,0 +1,50 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+
+  config.vm.box = "hashicorp/precise64"
+
+  # Webserver 1 configuration
+  config.vm.define "web1" do |web|
+    web.vm.hostname = "web1"
+    web.vm.network "private_network", ip: "192.168.50.2",
+    virtualbox__intnet: "intnet"
+    web.vm.provision "shell", inline: <<-SHELL
+        apt-get update
+        apt-get install -y apache2
+      SHELL
+  end
+
+  # Webserver 2 configuration
+  config.vm.define "web2" do |web|
+    web.vm.hostname = "web2"
+    web.vm.network "private_network", ip: "192.168.50.3",
+    virtualbox__intnet: "intnet"
+    web.vm.provision "shell", inline: <<-SHELL
+        apt-get update
+        apt-get install -y apache2
+      SHELL
+  end
+
+  # Load Balancer
+  config.vm.define "lb", primary: true do |lb|
+    lb.vm.hostname = "lb"
+    lb.vm.network "private_network", ip: "192.168.50.5",
+    virtualbox__intnet: "intnet"
+    lb.vm.network "forwarded_port", guest: 80, host: 3000
+    lb.vm.synced_folder "loadbalancer/", "/vopt"
+    lb.vm.provision "shell", inline: <<-SHELL
+        apt-get update
+        apt-get install -y nginx
+        cp -v /vopt/lb-config /etc/nginx/sites-enabled/default
+        /etc/init.d/nginx restart
+      SHELL
+  end
+end
